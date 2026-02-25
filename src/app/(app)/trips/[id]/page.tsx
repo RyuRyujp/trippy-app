@@ -1,9 +1,12 @@
 import Card from "@/components/ui/Card";
 import { theme } from "@/lib/theme";
 import { getTrip } from "@/lib/data/trips";
-import type { PageProps } from "@/types/ui";
 import type { TripTabKey } from "@/types/trip";
 import TripTabs from "@/components/trips/TripTabs";
+import ItineraryTab from "@/components/trips/ItineraryTab";
+import MemoTaskTab from "@/components/trips/MemoTaskTab";
+import ExpenseTab from "@/components/trips/ExpenseTab";
+import { notFound } from "next/navigation";
 
 function resolveTab(raw: string | string[] | undefined): TripTabKey {
   const v = Array.isArray(raw) ? raw[0] : raw;
@@ -11,24 +14,23 @@ function resolveTab(raw: string | string[] | undefined): TripTabKey {
   return "itinerary";
 }
 
-export default async function TripDetailPage(
-  props: PageProps<{ id: string }>
-) {
-  const { id } = props.params;
-  const tab = resolveTab(props.searchParams?.tab);
+type SP = { tab?: string | string[] };
+
+export default async function TripDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<SP>;
+}) {
+  const { id } = await params;                 // ★ await
+  const sp = (await searchParams) ?? {};       // ★ await（無い場合は {}）
+  const tab = resolveTab(sp.tab);
+
+  if (!id) notFound();
 
   const trip = await getTrip(id);
-  if (!trip) {
-    return (
-      <div style={{ minHeight: "100vh", background: theme.colors.bg, padding: 16 }}>
-        <div style={{ maxWidth: 980, margin: "0 auto" }}>
-          <Card>
-            <div style={{ fontWeight: 900 }}>Trip not found</div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  if (!trip) notFound();
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bg, padding: 16 }}>
@@ -44,9 +46,9 @@ export default async function TripDetailPage(
         <TripTabs tripId={trip.id} active={tab} />
 
         <Card>
-          {tab === "itinerary" && <div>旅程（ここに日別の行程を実装）</div>}
-          {tab === "memo_task" && <div>メモ・タスク（ここに一覧＋追加を実装）</div>}
-          {tab === "expense" && <div>費用（割り勘計算）（ここに精算UIを実装）</div>}
+          {tab === "itinerary" && <ItineraryTab tripId={trip.id} />}
+          {tab === "memo_task" && <MemoTaskTab tripId={trip.id} />}
+          {tab === "expense" && <ExpenseTab tripId={trip.id} />}
         </Card>
       </div>
     </div>
