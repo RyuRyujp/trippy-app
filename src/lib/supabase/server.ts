@@ -18,7 +18,6 @@ export const supabaseServer = async () => {
         },
         setAll(cookiesToSet: CookieToSet[]) {
           try {
-            // Next.js の実行環境によって cookies() が Readonly で set できない場合がある
             const store = cookieStore as unknown as {
               set?: (name: string, value: string, options?: CookieOptions) => void;
             };
