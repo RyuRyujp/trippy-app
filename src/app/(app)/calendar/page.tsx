@@ -6,8 +6,12 @@ import type { TripSummary } from "@/types/trip";
 
 type DayCell = { iso: string; d: number; inMonth: boolean };
 
-function pad2(n: number) { return String(n).padStart(2, "0"); }
-function iso(y: number, m: number, d: number) { return `${y}-${pad2(m)}-${pad2(d)}`; }
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+function iso(y: number, m: number, d: number) {
+  return `${y}-${pad2(m)}-${pad2(d)}`;
+}
 
 function buildGrid(y: number, m1: number): DayCell[] {
   const first = new Date(y, m1 - 1, 1);
@@ -33,17 +37,22 @@ function hits(trips: TripSummary[], day: string) {
   return trips.filter((t) => inRange(day, t.startDate, t.endDate));
 }
 
+// searchParams の中身
+type SP = Record<string, string | string[] | undefined>;
+
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<SP>; // ★Promiseにする
 }) {
   const now = new Date();
-  const yRaw = searchParams?.y;
-  const mRaw = searchParams?.m;
+
+  const sp = (await searchParams) ?? {}; // ★awaitしてから使う
+  const yRaw = sp.y;
+  const mRaw = sp.m;
 
   const y = Number(Array.isArray(yRaw) ? yRaw[0] : yRaw) || now.getFullYear();
-  const m = Number(Array.isArray(mRaw) ? mRaw[0] : mRaw) || (now.getMonth() + 1);
+  const m = Number(Array.isArray(mRaw) ? mRaw[0] : mRaw) || now.getMonth() + 1;
 
   const prevY = m === 1 ? y - 1 : y;
   const prevM = m === 1 ? 12 : m - 1;
@@ -61,7 +70,9 @@ export default async function CalendarPage({
             <Link href={`/calendar?y=${prevY}&m=${pad2(prevM)}`} style={{ textDecoration: "none", fontWeight: 900 }}>
               ←
             </Link>
-            <div style={{ fontWeight: 950 }}>{y}/{pad2(m)}</div>
+            <div style={{ fontWeight: 950 }}>
+              {y}/{pad2(m)}
+            </div>
             <Link href={`/calendar?y=${nextY}&m=${pad2(nextM)}`} style={{ textDecoration: "none", fontWeight: 900 }}>
               →
             </Link>
@@ -69,8 +80,10 @@ export default async function CalendarPage({
         </Card>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
-          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((w) => (
-            <div key={w} style={{ fontSize: 11, color: theme.colors.subtext, fontWeight: 800 }}>{w}</div>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => (
+            <div key={w} style={{ fontSize: 11, color: theme.colors.subtext, fontWeight: 800 }}>
+              {w}
+            </div>
           ))}
 
           {cells.map((c) => {
@@ -90,6 +103,7 @@ export default async function CalendarPage({
                 }}
               >
                 <div style={{ fontWeight: 900 }}>{c.d}</div>
+
                 {has ? (
                   <div style={{ marginTop: 6, display: "grid", gap: 4 }}>
                     {list.slice(0, 2).map((t) => (

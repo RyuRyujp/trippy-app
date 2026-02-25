@@ -64,6 +64,7 @@ export default function TabBar() {
                 alignItems: "center",
                 gap: 6,
                 padding: "8px 8px",
+                paddingBottom: "12px",
                 borderRadius: 14,
                 border: active ? `1px solid ${theme.colors.border}` : "1px solid transparent",
                 background: active ? "rgba(255,255,255,0.65)" : "transparent",
