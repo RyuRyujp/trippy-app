@@ -1,65 +1,144 @@
-import Image from "next/image";
+import Link from "next/link";
+import Card from "@/components/ui/Card";
+import SectionTitle from "@/components/ui/SectionTitle";
+import { theme } from "@/lib/theme";
+import { homeMock } from "@/lib/mock/homeMock";
 
-export default function Home() {
+import { ChevronRight } from "lucide-react";
+
+type Trip = {
+  id: string;
+  title: string;
+  startDate: string; // "YYYY-MM-DD"
+  endDate: string;   // "YYYY-MM-DD"
+  city?: string;
+};
+
+type HomeMock = {
+  trips: Trip[];
+};
+
+function formatRange(start: string, end: string) {
+  // 例: 2026-03-10 -> 2026/03/10
+  const s = start.replaceAll("-", "/");
+  const e = end.replaceAll("-", "/");
+  return `${s} – ${e}`;
+}
+
+function pickNextTrip(trips: Trip[]): Trip | null {
+  if (trips.length === 0) return null;
+
+  // “次の旅行”は一旦単純に startDate の昇順で最小を採用（後で today 比較にする）
+  const sorted = [...trips].sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  return sorted[0] ?? null;
+}
+
+export default function HomePage() {
+  // homeMock の中身を「この画面で必要な形」として型付け（any は使わない）
+  const { trips } = homeMock as unknown as HomeMock;
+
+  const nextTrip = pickNextTrip(trips);
+  const recent = trips.slice(0, 3);
+
+  const nextTripHref = nextTrip ? `/trips/${nextTrip.id}` : "#";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div style={{ minHeight: "100vh", background: theme.colors.bg, padding: 16 }}>
+      <div style={{ maxWidth: 980, margin: "0 auto", display: "grid", gap: 14 }}>
+        {/* ===== Next Trip ===== */}
+        <SectionTitle
+          title="Next Trip"
+          right={
+            <Link href="/trips" style={{ textDecoration: "none", color: theme.colors.subtext }}>
+              すべて見る <ChevronRight size={12} style={{ verticalAlign: "-2px" }} />
+            </Link>
+          }
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        <Link
+          href={nextTripHref}
+          aria-disabled={!nextTrip}
+          style={{
+            textDecoration: "none",
+            pointerEvents: nextTrip ? "auto" : "none",
+            opacity: nextTrip ? 1 : 0.7,
+          }}
+        >
+          <Card>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 950, fontSize: 18, color: theme.colors.text, lineHeight: 1.2 }}>
+                  {nextTrip?.title ?? "No trip"}
+                </div>
+                <div style={{ marginTop: 6, color: theme.colors.subtext, fontSize: 12 }}>
+                  {nextTrip?.city ? `${nextTrip.city} • ` : ""}
+                  {nextTrip ? formatRange(nextTrip.startDate, nextTrip.endDate) : "—"}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: 16,
+                  padding: "10px 12px",
+                  border: `1px solid ${theme.colors.border}`,
+                  background: "rgba(255,255,255,0.7)",
+                  fontWeight: 900,
+                  color: theme.colors.text,
+                  whiteSpace: "nowrap",
+                  height: "fit-content",
+                }}
+              >
+                Open
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              <MiniStat label="Days" value="—" />
+              <MiniStat label="Memos" value="—" />
+              <MiniStat label="Expenses" value="—" />
+            </div>
+          </Card>
+        </Link>
+
+        {/* ===== Recent Trips ===== */}
+        <SectionTitle title="Recent Trips" />
+        <div style={{ display: "grid", gap: 10 }}>
+          {recent.map((t) => (
+            <Link key={t.id} href={`/trips/${t.id}`} style={{ textDecoration: "none" }}>
+              <Card>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 900, color: theme.colors.text, lineHeight: 1.2 }}>{t.title}</div>
+                    <div style={{ marginTop: 6, fontSize: 12, color: theme.colors.subtext }}>
+                      {t.city ? `${t.city} • ` : ""}
+                      {formatRange(t.startDate, t.endDate)}
+                    </div>
+                  </div>
+                  <ChevronRight size={18} />
+                </div>
+              </Card>
+            </Link>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <div style={{ height: 10 }} />
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        border: `1px solid ${theme.colors.border}`,
+        background: "rgba(255,255,255,0.55)",
+        padding: 12,
+      }}
+    >
+      <div style={{ fontSize: 11, color: theme.colors.subtext, fontWeight: 800 }}>{label}</div>
+      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 950, color: theme.colors.text }}>{value}</div>
     </div>
   );
 }
