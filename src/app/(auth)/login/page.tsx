@@ -5,6 +5,16 @@ import { supabaseBrowser } from "@/lib/supabase/browser";
 import { appConfig } from "@/lib/config/app";
 import { theme } from "@/lib/theme";
 
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  if (e && typeof e === "object" && "message" in e) {
+    const m = (e as { message?: unknown }).message;
+    if (typeof m === "string") return m;
+  }
+  return "不明なエラーが発生しました";
+}
+
 export default function LoginPage() {
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
@@ -22,15 +32,15 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // OTPコード入力方式にしたい場合（テンプレ/設定はSupabase側）
           shouldCreateUser: true,
         },
       });
       if (error) throw error;
+
       setStep("otp");
       setMsg("認証コードをメールに送信しました。");
-    } catch (e: any) {
-      setErr(e?.message ?? "送信に失敗しました");
+    } catch (e: unknown) {
+      setErr(getErrorMessage(e) || "送信に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -41,17 +51,26 @@ export default function LoginPage() {
     setMsg(null);
     setLoading(true);
     try {
-      // Route Handler経由でサーバ側cookie更新も確実にする
       const res = await fetch("/api/auth/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, otp }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "認証に失敗しました");
+
+      // 失敗時に JSON じゃない可能性もあるのでガード
+      const json: unknown = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const message =
+          typeof (json as { error?: unknown })?.error === "string"
+            ? (json as { error: string }).error
+            : "認証に失敗しました";
+        throw new Error(message);
+      }
+
       window.location.href = "/";
-    } catch (e: any) {
-      setErr(e?.message ?? "認証に失敗しました");
+    } catch (e: unknown) {
+      setErr(getErrorMessage(e) || "認証に失敗しました");
     } finally {
       setLoading(false);
     }
